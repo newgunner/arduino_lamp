@@ -25,7 +25,7 @@ CRGB temperatures[10] = {Candle, Tungsten40W, Tungsten100W,
                   DirectSunlight, OvercastSky, ClearBlueSky, 
                   0x000000};
 
-int i = 0;
+uint8_t temp_num = 0; // number of palette in color temperature array
 uint8_t brightness = 64;
 
 void setup() {
@@ -36,6 +36,8 @@ void setup() {
   FastLED.setBrightness( brightness );
   Serial.begin(9600);
   enc.attach(TURN_HANDLER, encTurn);   // attach handler for turning rotary encoder
+  enc.attach(CLICK_HANDLER, encClick);   // attach handler for clicking rotary encoder
+
   attachInterrupt(0, isr, CHANGE); // attach interrupts
   attachInterrupt(1, isr, CHANGE); // in main loop we have delays => turning events without interrupts are unstable
 }
@@ -53,6 +55,10 @@ void encTurn() {
       brightness+=4;
 }
 
+void encClick() {
+  temp_num = (temp_num + 1) % ARRAY_SIZE(temperatures);
+}
+
 void isr() {
   enc.tickISR();
 }
@@ -60,21 +66,18 @@ void isr() {
 void loop()
 {
   enc.tick();   // tick in main loop as is in library example
-  Serial.println(i);
-  Serial.print("brightness: ");
-  Serial.println(brightness);
+  //Serial.println(temp_num);
+  //Serial.print("brightness: ");
+  //Serial.println(brightness);
 
   fill_solid( leds, NUM_LEDS, CRGB(255,255,255));
   leds[0] = 0x000000; //one LED is redundant, just paint it black. Too lazy to fix LED strip
   FastLED.setBrightness( brightness );
-  FastLED.setTemperature( temperatures[i] );
+  FastLED.setTemperature( temperatures[temp_num] );
 
   FastLED.show();  
   // insert a delay to keep the framerate modest
-  FastLED.delay(1000/FRAMES_PER_SECOND); 
-
-  // switch between temps
-  EVERY_N_SECONDS(5) {i = (i + 1) % ARRAY_SIZE(temperatures);}
+  FastLED.delay(1000/FRAMES_PER_SECOND);
 }
 
 
