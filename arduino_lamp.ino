@@ -27,10 +27,12 @@ CRGB white_temps[9] = {Candle, Tungsten40W, Tungsten100W,
                   DirectSunlight, OvercastSky, ClearBlueSky};
 
 uint8_t temp_num = 0; // number of palette in color temperature array
+uint8_t rainbow_num = 0; // number of animation in rainbow array
 uint8_t brightness = 64;
 uint8_t current_menu = 0;
+uint8_t current_mode = 0;
 enum menu {
-  MENU_MAIN = 0,
+  MENU_MODE = 0,
   MENU_BRIGHT,
   MENU_PALETTE,
   MENU_MAX,
@@ -40,6 +42,12 @@ enum rotate_direction {
   DIR_LEFT = -1,
   DIR_UNKNOWN = 0,
   DIR_RIGHT = 1,
+};
+
+enum mode {
+  MODE_LAMP = 0,
+  MODE_RAINBOW,
+  MODE_MAX,
 };
 
 void setup() {
@@ -65,8 +73,8 @@ void encTurn() {
     direction = DIR_RIGHT;
 
   switch (current_menu) {
-    case MENU_MAIN:
-      // not implemented
+    case MENU_MODE:
+      current_mode = (current_mode + 1) % MODE_MAX;
       break;
     case MENU_BRIGHT:
       if ((direction == DIR_LEFT) && (brightness <= (MIN_BRIGHTNESS + STEP)))
@@ -77,7 +85,10 @@ void encTurn() {
         brightness += STEP * direction;
       break;
     case MENU_PALETTE:
-      temp_num = (temp_num + direction) % ARRAY_SIZE(white_temps);
+      if (current_mode == MODE_LAMP)
+        temp_num = (temp_num + direction) % ARRAY_SIZE(white_temps);
+      else if (current_mode == MODE_RAINBOW)
+        // TODO
       break;
   }
 }
@@ -94,20 +105,27 @@ void isr() {
 void loop()
 {
   enc.tick();   // tick in main loop as is in library example
-  //Serial.println(temp_num);
-  //Serial.println(current_menu);
-  //Serial.print("brightness: ");
-  //Serial.println(brightness);
+  Serial.println(temp_num);
+  Serial.print("menu: ");
+  Serial.println(current_menu);
+  Serial.print("mode: ");
+  Serial.println(current_mode);
+  Serial.print("brightness: ");
+  Serial.println(brightness);
 
-  fill_solid( leds, NUM_LEDS, CRGB(255,255,255));
+  // TODO: replace 'if' to 'switch-case'
+  if (current_mode == MODE_LAMP) {
+    fill_solid( leds, NUM_LEDS, CRGB(255,255,255));
+    FastLED.setTemperature( white_temps[temp_num] );
+  }
+  else if (current_mode == MODE_RAINBOW) {
+    static uint8_t starthue = 0;
+    fill_rainbow( leds, NUM_LEDS, --starthue, 20);
+    FastLED.setTemperature(UncorrectedTemperature);
+  }
   leds[0] = 0x000000; // one LED is redundant, just paint it black. Too lazy to fix LED strip
   FastLED.setBrightness( brightness );
-  FastLED.setTemperature( white_temps[temp_num] );
-
   FastLED.show();  
   // insert a delay to keep the framerate modest
   FastLED.delay(1000/FRAMES_PER_SECOND);
 }
-
-
-
