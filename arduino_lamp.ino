@@ -22,13 +22,25 @@
 EncButton<EB_CALLBACK, CLK_PIN, DT_PIN, SW_PIN> enc;
 
 CRGB leds[NUM_LEDS];
-CRGB temperatures[10] = {Candle, Tungsten40W, Tungsten100W, 
+CRGB white_temps[9] = {Candle, Tungsten40W, Tungsten100W, 
                   Halogen, CarbonArc, HighNoonSun, 
-                  DirectSunlight, OvercastSky, ClearBlueSky, 
-                  0x000000};
+                  DirectSunlight, OvercastSky, ClearBlueSky};
 
 uint8_t temp_num = 0; // number of palette in color temperature array
 uint8_t brightness = 64;
+uint8_t current_menu = 0;
+enum menu {
+  MENU_MAIN = 0,
+  MENU_BRIGHT,
+  MENU_PALETTE,
+  MENU_MAX,
+};
+
+enum rotate_direction {
+  DIR_LEFT = -1,
+  DIR_UNKNOWN = 0,
+  DIR_RIGHT = 1,
+};
 
 void setup() {
   delay( 3000 ); // power-up safety delay
@@ -45,20 +57,34 @@ void setup() {
 }
 
 void encTurn() {
+  // change behavior of rotating based on current menu number
+  int direction = DIR_UNKNOWN;
   if (enc.left())
-    if (brightness <= (MIN_BRIGHTNESS + STEP))
-      brightness = MIN_BRIGHTNESS;
-    else
-      brightness-=STEP;
-  if (enc.right()) 
-    if (brightness >= (MAX_BRIGHTNESS - STEP))
-      brightness = MAX_BRIGHTNESS;
-    else
-      brightness+=STEP;
+    direction = DIR_LEFT;
+  if (enc.right())
+    direction = DIR_RIGHT;
+
+  switch (current_menu) {
+    case MENU_MAIN:
+      // not implemented
+      break;
+    case MENU_BRIGHT:
+      if ((direction == DIR_LEFT) && (brightness <= (MIN_BRIGHTNESS + STEP)))
+        brightness = MIN_BRIGHTNESS;
+      else if ((direction == DIR_RIGHT) && (brightness >= (MAX_BRIGHTNESS - STEP)))
+        brightness = MAX_BRIGHTNESS;
+      else 
+        brightness += STEP * direction;
+      break;
+    case MENU_PALETTE:
+      temp_num = (temp_num + direction) % ARRAY_SIZE(white_temps);
+      break;
+  }
 }
 
 void encClick() {
-  temp_num = (temp_num + 1) % ARRAY_SIZE(temperatures);
+  // switch menu items
+  current_menu = (current_menu + 1) % MENU_MAX;
 }
 
 void isr() {
@@ -69,13 +95,14 @@ void loop()
 {
   enc.tick();   // tick in main loop as is in library example
   //Serial.println(temp_num);
+  //Serial.println(current_menu);
   //Serial.print("brightness: ");
   //Serial.println(brightness);
 
   fill_solid( leds, NUM_LEDS, CRGB(255,255,255));
-  leds[0] = 0x000000; //one LED is redundant, just paint it black. Too lazy to fix LED strip
+  leds[0] = 0x000000; // one LED is redundant, just paint it black. Too lazy to fix LED strip
   FastLED.setBrightness( brightness );
-  FastLED.setTemperature( temperatures[temp_num] );
+  FastLED.setTemperature( white_temps[temp_num] );
 
   FastLED.show();  
   // insert a delay to keep the framerate modest
