@@ -14,7 +14,9 @@
 
 // other stuff
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
-#define BRIGHTNESS  10
+#define MAX_BRIGHTNESS  255
+#define MIN_BRIGHTNESS  0
+#define STEP  8
 #define FRAMES_PER_SECOND  60
 
 EncButton<EB_CALLBACK, CLK_PIN, DT_PIN, SW_PIN> enc;
@@ -44,15 +46,15 @@ void setup() {
 
 void encTurn() {
   if (enc.left())
-    if (brightness <= 4)
-      brightness = 0;
+    if (brightness <= (MIN_BRIGHTNESS + STEP))
+      brightness = MIN_BRIGHTNESS;
     else
-      brightness-=4;
+      brightness-=STEP;
   if (enc.right()) 
-    if (brightness >= 251)
-      brightness = 255;
+    if (brightness >= (MAX_BRIGHTNESS - STEP))
+      brightness = MAX_BRIGHTNESS;
     else
-      brightness+=4;
+      brightness+=STEP;
 }
 
 void encClick() {
